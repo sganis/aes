@@ -40,9 +40,6 @@ std::string encrypt(const std::string & data, const std::string& password)
 {
     std::vector<unsigned char> key(picosha2::k_digest_size);
     picosha2::hash256(password.begin(), password.end(), key.begin(), key.end());
-
-//    const unsigned char iv[16] = {0x73, 0xD4, 0xA3, 0x24, 0x73, 0xF4, 0xD6, 0x90,
-//                                  0xEE, 0xA2, 0x5E, 0xE6, 0xE0, 0x9F, 0xF5, 0x49};
     unsigned char iv[16];
     _generate_iv(&iv);
     std::string padded_data = _pad(data);
