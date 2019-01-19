@@ -2,14 +2,27 @@
 #
 # Python3 AES encryption compatible with openssl
 #
-# encrypt with openssl:
+# Algorithm settings:
+# - enc mode: aes-256-cbc
+# - key hash: sha256
+# - key length: 32 bytes
+# - iv length: 16 bytes
+# - salt: 8 bytes
+# - output: base64
+#
+# Usage:
+# a - AESCipher('password')
+# enc = a.encrypt('hello world')
+# dec = a.decrypt(enc)
+#
+# Encrypt with openssl:
 # $ echo -n "hello world" | openssl enc -e -aes-256-cbc -base64 -md sha256 -k password -p
 # salt = 2C8A40BAAA94F403
 # key  = 48345D2343D99187EC0F9DC28B5C27F1D71839BDDFBC639CE4EAD2E48360CB71
 # iv   = 7CD3A32D9C4BA2B4B8F03A105B3F95A5
 # U2FsdGVkX18sikC6qpT0A4smic6o30MeBljBP5+SyTg=
 #
-# decrypt with openssl:
+# Decrypt with openssl:
 # echo "U2FsdGVkX18sikC6qpT0A4smic6o30MeBljBP5+SyTg=" | openssl enc -d -aes-256-cbc -base64 -md sha256 -k password
 
 import base64
@@ -31,36 +44,32 @@ class AESCipher(object):
         enc      = b'Salted__' + salt + cipher.encrypt(self.pad(text))
         enc      = base64.b64encode(enc).decode('utf-8')
         if self.verbose:
-            print(f'text        : { text }')
-            print(f'salt        : { salt.hex().upper() }')
-            print(f'key         : { key.hex().upper() }')
-            print(f'iv          : { iv.hex().upper() }')
-            print(f'enc         : { enc }')
+            print(f'text = { text }')
+            print(f'salt = { salt.hex().upper() }')
+            print(f'key  = { key.hex().upper() }')
+            print(f'iv   = { iv.hex().upper() }')
+            print(f'enc  = { enc }')
         return enc
 
     def decrypt(self, enc):
-        enc     = base64.b64decode(enc)
-        salt    = enc[:16][len('Salted__'):]   
+        encb    = base64.b64decode(enc)
+        salt    = encb[:16][len('Salted__'):]   
         key, iv = self.openssl_key_and_iv(self.password, salt)
         cipher  = AES.new(key, AES.MODE_CBC, iv)
-        text    = self.unpad(cipher.decrypt(enc[16:])).decode('utf-8')
+        text    = self.unpad(cipher.decrypt(encb[16:])).decode('utf-8')
         if self.verbose:
-            print(f'enc         : { enc }')
-            print(f'salt        : { salt.hex().upper() }')
-            print(f'key         : { key.hex().upper() }')
-            print(f'iv          : { iv.hex().upper() }')
-            print(f'text        : { text }')
+            print(f'enc  = { enc }')
+            print(f'salt = { salt.hex().upper() }')
+            print(f'key  = { key.hex().upper() }')
+            print(f'iv   = { iv.hex().upper() }')
+            print(f'text = { text }')
         return text
 
     @staticmethod
     def openssl_key_and_iv(password, salt):
-        key_length = 32
-        iv_length = 16
-        d = d_i = b''
-        while len(d) < key_length + iv_length:
-            d_i = hashlib.sha256(d_i + password.encode() + salt).digest()
-            d += d_i
-        return d[:key_length], d[key_length:key_length + iv_length]
+        d  = hashlib.sha256(password.encode() + salt).digest()
+        d += hashlib.sha256(d + password.encode() + salt).digest()
+        return d[:32], d[32:48]
 
     @staticmethod
     def pad(s):
